@@ -1,0 +1,1088 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LexiGuard - Contract Analysis</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+        }
+
+        body {
+            background: #f4f5f8;
+            color: #222;
+        }
+
+        /* SIDEBAR */
+
+        .sidebar {
+            position: fixed;
+            left: 0;
+            top: 0;
+            width: 220px;
+            height: 100vh;
+            background: #15151c;
+            color: white;
+            padding: 25px 18px;
+        }
+
+        .logo {
+            font-size: 22px;
+            font-weight: bold;
+            margin-bottom: 40px;
+        }
+
+        .logo span {
+            color: #9b7cff;
+        }
+
+        .nav-item {
+            padding: 13px;
+            margin-bottom: 8px;
+            border-radius: 8px;
+            cursor: pointer;
+            color: #bbb;
+        }
+
+        .nav-item:hover,
+        .nav-item.active {
+            background: #292934;
+            color: white;
+        }
+
+        .secure {
+            position: absolute;
+            bottom: 25px;
+            left: 18px;
+            color: #888;
+            font-size: 12px;
+        }
+
+        /* MAIN */
+
+        .main {
+            margin-left: 220px;
+            padding: 25px;
+        }
+
+        .topbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+        }
+
+        .topbar h1 {
+            font-size: 26px;
+        }
+
+        .filename {
+            color: #777;
+            margin-top: 5px;
+        }
+
+        button {
+            border: none;
+            padding: 11px 17px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .download {
+            background: white;
+            border: 1px solid #ddd;
+            margin-right: 8px;
+        }
+
+        .complete {
+            background: #7c5cff;
+            color: white;
+        }
+
+        /* RISK SUMMARY */
+
+        .summary {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            display: flex;
+            gap: 35px;
+            align-items: center;
+            margin-bottom: 20px;
+            border: 1px solid #e5e5e5;
+        }
+
+        .score {
+            font-size: 35px;
+            font-weight: bold;
+        }
+
+        .risk-high {
+            color: #d93025;
+            font-weight: bold;
+        }
+
+        .risk-counts {
+            display: flex;
+            gap: 25px;
+        }
+
+        .count strong {
+            display: block;
+            font-size: 20px;
+        }
+
+        .count span {
+            color: #777;
+            font-size: 13px;
+        }
+
+        /* WORKSPACE */
+
+        .workspace {
+            display: grid;
+            grid-template-columns: 220px 1fr 330px;
+            gap: 18px;
+        }
+
+        .panel {
+            background: white;
+            border-radius: 12px;
+            border: 1px solid #e2e2e2;
+            overflow: hidden;
+        }
+
+        .panel-header {
+            padding: 16px;
+            border-bottom: 1px solid #eee;
+            font-weight: bold;
+        }
+
+        /* FINDINGS */
+
+        .finding {
+            padding: 15px;
+            border-bottom: 1px solid #eee;
+            cursor: pointer;
+        }
+
+        .finding:hover {
+            background: #f7f7fb;
+        }
+
+        .finding.active {
+            background: #eeeafd;
+            border-left: 4px solid #7c5cff;
+        }
+
+        .finding-title {
+            font-weight: bold;
+            margin-bottom: 7px;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 7px;
+            border-radius: 5px;
+            font-size: 11px;
+            font-weight: bold;
+        }
+
+        .critical {
+            background: #ffe3e1;
+            color: #c5221f;
+        }
+
+        .high {
+            background: #fff0d6;
+            color: #a15c00;
+        }
+
+        .medium {
+            background: #fff8cc;
+            color: #806600;
+        }
+
+        /* CONTRACT */
+
+        .contract-panel {
+            min-height: 650px;
+        }
+
+        .contract-toolbar {
+            padding: 12px 15px;
+            background: #fafafa;
+            border-bottom: 1px solid #eee;
+            font-size: 13px;
+            color: #777;
+        }
+
+        .contract {
+            padding: 35px;
+            line-height: 1.7;
+            font-family: Georgia, serif;
+            outline: none;
+            min-height: 580px;
+        }
+
+        .contract h2 {
+            font-family: Georgia, serif;
+            margin-bottom: 20px;
+        }
+
+        .contract h3 {
+            font-family: Georgia, serif;
+            margin-top: 25px;
+            margin-bottom: 8px;
+        }
+
+        /*
+            RISKY TEXT
+        */
+
+        .risky {
+            background: #ffd7d4;
+            border-bottom: 2px solid #e53935;
+            padding: 2px 4px;
+            cursor: pointer;
+        }
+
+        .risky:hover {
+            background: #ffc2bd;
+        }
+
+        /*
+            ACCEPTED REDLINE
+        */
+
+        .accepted {
+            background: #d8f5df;
+            border-bottom: 2px solid #2e9d52;
+            padding: 2px 4px;
+        }
+
+        /* RIGHT PANEL */
+
+        .analysis {
+            padding: 18px;
+        }
+
+        .analysis h3 {
+            margin-bottom: 10px;
+        }
+
+        .analysis-section {
+            margin-top: 22px;
+        }
+
+        .analysis-section h4 {
+            font-size: 12px;
+            color: #777;
+            margin-bottom: 7px;
+            text-transform: uppercase;
+        }
+
+        .analysis-section p {
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .comparison {
+            background: #f6f6f8;
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 13px;
+            line-height: 1.6;
+        }
+
+        .suggestion {
+            background: #eeeafd;
+            border: 1px solid #d5ccff;
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 13px;
+            line-height: 1.6;
+        }
+
+        .redline-buttons {
+            display: flex;
+            gap: 8px;
+            margin-top: 20px;
+        }
+
+        .accept {
+            background: #2e9d52;
+            color: white;
+            flex: 1;
+        }
+
+        .reject {
+            background: white;
+            border: 1px solid #ddd;
+            flex: 1;
+        }
+
+        .status {
+            margin-top: 12px;
+            font-size: 13px;
+            font-weight: bold;
+        }
+
+        /* RESPONSIVE */
+
+        @media(max-width: 1100px) {
+            .workspace {
+                grid-template-columns: 200px 1fr;
+            }
+
+            .right-panel {
+                display: none;
+            }
+        }
+
+        @media(max-width: 750px) {
+            .sidebar {
+                display: none;
+            }
+
+            .main {
+                margin-left: 0;
+                padding: 15px;
+            }
+
+            .workspace {
+                grid-template-columns: 1fr;
+            }
+
+            .summary {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .risk-counts {
+                flex-wrap: wrap;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+<!-- SIDEBAR -->
+
+<div class="sidebar">
+
+    <div class="logo">
+        Lexi<span>Guard</span>
+    </div>
+
+    <div class="nav-item">Dashboard</div>
+    <div class="nav-item active">Contracts</div>
+    <div class="nav-item">Legal Playbook</div>
+    <div class="nav-item">Settings</div>
+
+    <div class="secure">
+        🔒 Secure Workspace
+    </div>
+
+</div>
+
+
+<!-- MAIN -->
+
+<div class="main">
+
+    <div class="topbar">
+
+        <div>
+            <h1>Contract Analysis</h1>
+            <div class="filename">
+                Acme_Vendor_Agreement.pdf
+            </div>
+        </div>
+
+        <div>
+            <button class="download" onclick="downloadContract()">
+                Download
+            </button>
+
+            <button class="complete" onclick="completeReview()">
+                Complete Review
+            </button>
+        </div>
+
+    </div>
+
+
+    <!-- SUMMARY -->
+
+    <div class="summary">
+
+        <div>
+            <div class="score">78</div>
+            <div class="risk-high">HIGH RISK</div>
+        </div>
+
+        <div class="risk-counts">
+
+            <div class="count">
+                <strong>3</strong>
+                <span>Critical</span>
+            </div>
+
+            <div class="count">
+                <strong>4</strong>
+                <span>High</span>
+            </div>
+
+            <div class="count">
+                <strong>7</strong>
+                <span>Medium</span>
+            </div>
+
+            <div class="count">
+                <strong>20</strong>
+                <span>Low</span>
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- WORKSPACE -->
+
+    <div class="workspace">
+
+
+        <!-- RISK FINDINGS -->
+
+        <div class="panel">
+
+            <div class="panel-header">
+                Risk Findings
+            </div>
+
+            <div class="finding active"
+                 data-risk="liability">
+
+                <div class="finding-title">
+                    Unlimited Liability
+                </div>
+
+                <span class="badge critical">
+                    CRITICAL
+                </span>
+
+                <small>§12</small>
+
+            </div>
+
+
+            <div class="finding"
+                 data-risk="ip">
+
+                <div class="finding-title">
+                    IP Ownership
+                </div>
+
+                <span class="badge critical">
+                    CRITICAL
+                </span>
+
+                <small>§18</small>
+
+            </div>
+
+
+            <div class="finding"
+                 data-risk="payment">
+
+                <div class="finding-title">
+                    Payment Terms
+                </div>
+
+                <span class="badge high">
+                    HIGH
+                </span>
+
+                <small>§7</small>
+
+            </div>
+
+
+            <div class="finding"
+                 data-risk="renewal">
+
+                <div class="finding-title">
+                    Automatic Renewal
+                </div>
+
+                <span class="badge high">
+                    HIGH
+                </span>
+
+                <small>§9</small>
+
+            </div>
+
+
+            <div class="finding"
+                 data-risk="privacy">
+
+                <div class="finding-title">
+                    Data Protection
+                </div>
+
+                <span class="badge medium">
+                    MEDIUM
+                </span>
+
+                <small>§21</small>
+
+            </div>
+
+        </div>
+
+
+        <!-- CONTRACT -->
+
+        <div class="panel contract-panel">
+
+            <div class="panel-header">
+                Contract Document
+            </div>
+
+            <div class="contract-toolbar">
+                ✏️ Click anywhere in the document to edit
+            </div>
+
+
+            <!-- THIS IS THE EDITABLE CONTRACT -->
+
+            <div
+                class="contract"
+                id="contract"
+                contenteditable="true"
+            >
+
+                <h2>VENDOR SERVICES AGREEMENT</h2>
+
+                <p>
+                    This Vendor Services Agreement ("Agreement") is entered
+                    into between Acme Corporation ("Company") and
+                    Vendor Technologies ("Vendor").
+                </p>
+
+
+                <h3>§7 Payment Terms</h3>
+
+                <p>
+                    The Company shall make payment to the Vendor within
+                    <span
+                        id="paymentClause"
+                        class="risky"
+                    >
+                        30 days
+                    </span>
+                    of receipt of a valid invoice.
+                </p>
+
+
+                <h3>§9 Automatic Renewal</h3>
+
+                <p>
+                    This Agreement shall automatically renew for successive
+                    periods of one year unless either party provides written
+                    notice of termination at least
+                    <span
+                        id="renewalClause"
+                        class="risky"
+                    >
+                        30 days prior to expiration
+                    </span>.
+                </p>
+
+
+                <h3>§12 Limitation of Liability</h3>
+
+                <p>
+                    The Vendor shall have
+                    <span
+                        id="liabilityClause"
+                        class="risky"
+                    >
+                        unlimited liability for all losses, damages,
+                        claims and expenses arising from this Agreement
+                    </span>.
+                </p>
+
+
+                <h3>§18 Intellectual Property</h3>
+
+                <p>
+                    All intellectual property created during the provision
+                    of services shall be owned by
+                    <span
+                        id="ipClause"
+                        class="risky"
+                    >
+                        the Vendor
+                    </span>.
+                </p>
+
+
+                <h3>§21 Data Protection</h3>
+
+                <p>
+                    Vendor shall maintain reasonable security measures
+                    for all Company data and shall notify the Company
+                    of any security incident.
+                </p>
+
+
+                <h3>§25 General</h3>
+
+                <p>
+                    This Agreement constitutes the entire agreement
+                    between the parties and supersedes all prior
+                    discussions and agreements.
+                </p>
+
+            </div>
+
+        </div>
+
+
+        <!-- AI ANALYSIS -->
+
+        <div class="panel right-panel">
+
+            <div class="panel-header">
+                AI Analysis
+            </div>
+
+            <div class="analysis">
+
+                <h3 id="analysisTitle">
+                    Unlimited Liability
+                </h3>
+
+                <span
+                    id="analysisBadge"
+                    class="badge critical"
+                >
+                    CRITICAL
+                </span>
+
+
+                <div class="analysis-section">
+
+                    <h4>
+                        Why was this flagged?
+                    </h4>
+
+                    <p id="explanation">
+                        The contract gives the vendor unlimited
+                        liability. Corporate policy normally requires
+                        liability to be capped.
+                    </p>
+
+                </div>
+
+
+                <div class="analysis-section">
+
+                    <h4>
+                        Playbook Requirement
+                    </h4>
+
+                    <div
+                        class="comparison"
+                        id="requirement"
+                    >
+                        Liability should normally be limited
+                        to the total fees paid under the agreement.
+                    </div>
+
+                </div>
+
+
+                <div class="analysis-section">
+
+                    <h4>
+                        Current Clause
+                    </h4>
+
+                    <div
+                        class="comparison"
+                        id="currentClause"
+                    >
+                        Unlimited liability for all losses,
+                        damages, claims and expenses.
+                    </div>
+
+                </div>
+
+
+                <div class="analysis-section">
+
+                    <h4>
+                        Suggested Redline
+                    </h4>
+
+                    <div
+                        class="suggestion"
+                        id="suggestion"
+                    >
+                        Vendor's liability shall be limited to
+                        the total fees paid under this Agreement.
+                    </div>
+
+                </div>
+
+
+                <div class="redline-buttons">
+
+                    <button
+                        class="accept"
+                        onclick="acceptRedline()"
+                    >
+                        ✓ Accept Redline
+                    </button>
+
+                    <button
+                        class="reject"
+                        onclick="rejectRedline()"
+                    >
+                        Reject
+                    </button>
+
+                </div>
+
+
+                <div
+                    class="status"
+                    id="status"
+                ></div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+<script>
+
+    /*
+        DATA FOR EACH RISK
+    */
+
+    const data = {
+
+        liability: {
+
+            title: "Unlimited Liability",
+
+            badge: "CRITICAL",
+
+            explanation:
+                "The contract gives the vendor unlimited liability. Corporate policy normally requires liability to be capped.",
+
+            requirement:
+                "Liability should normally be limited to the total fees paid under the agreement.",
+
+            current:
+                "unlimited liability for all losses, damages, claims and expenses arising from this Agreement",
+
+            suggested:
+                "Vendor's liability shall be limited to the total fees paid under this Agreement.",
+
+            clause: "liabilityClause"
+
+        },
+
+
+        ip: {
+
+            title: "IP Ownership",
+
+            badge: "CRITICAL",
+
+            explanation:
+                "The agreement gives ownership of work created for the Company to the Vendor.",
+
+            requirement:
+                "Work product created specifically for the Company should generally belong to the Company.",
+
+            current:
+                "the Vendor",
+
+            suggested:
+                "the Company",
+
+            clause: "ipClause"
+
+        },
+
+
+        payment: {
+
+            title: "Payment Terms",
+
+            badge: "HIGH",
+
+            explanation:
+                "The payment period may be shorter than the Company's preferred payment cycle.",
+
+            requirement:
+                "Corporate policy prefers a 60-day payment period.",
+
+            current:
+                "30 days",
+
+            suggested:
+                "60 days",
+
+            clause: "paymentClause"
+
+        },
+
+
+        renewal: {
+
+            title: "Automatic Renewal",
+
+            badge: "HIGH",
+
+            explanation:
+                "The agreement automatically renews unless notice is provided sufficiently early.",
+
+            requirement:
+                "Corporate policy prefers 60 days notice before renewal.",
+
+            current:
+                "30 days prior to expiration",
+
+            suggested:
+                "60 days prior to expiration",
+
+            clause: "renewalClause"
+
+        },
+
+
+        privacy: {
+
+            title: "Data Protection",
+
+            badge: "MEDIUM",
+
+            explanation:
+                "The data protection clause does not specify detailed security requirements.",
+
+            requirement:
+                "The agreement should include appropriate technical and organizational security measures.",
+
+            current:
+                "reasonable security measures",
+
+            suggested:
+                "appropriate technical and organizational security measures",
+
+            clause: null
+
+        }
+
+    };
+
+
+    /*
+        SELECTING A RISK
+    */
+
+    const findings =
+        document.querySelectorAll(".finding");
+
+
+    findings.forEach(function(finding) {
+
+        finding.addEventListener("click", function() {
+
+            findings.forEach(function(item) {
+                item.classList.remove("active");
+            });
+
+            finding.classList.add("active");
+
+            const risk =
+                finding.dataset.risk;
+
+            showAnalysis(risk);
+
+        });
+
+    });
+
+
+    /*
+        SHOW ANALYSIS
+    */
+
+    function showAnalysis(risk) {
+
+        const item = data[risk];
+
+        document.getElementById("analysisTitle")
+            .textContent = item.title;
+
+        document.getElementById("analysisBadge")
+            .textContent = item.badge;
+
+        document.getElementById("explanation")
+            .textContent = item.explanation;
+
+        document.getElementById("requirement")
+            .textContent = item.requirement;
+
+        document.getElementById("currentClause")
+            .textContent = item.current;
+
+        document.getElementById("suggestion")
+            .textContent = item.suggested;
+
+        document.getElementById("status")
+            .textContent = "";
+
+        /*
+            Remember currently selected risk
+        */
+
+        window.currentRisk = risk;
+
+    }
+
+
+    /*
+        ACCEPT REDLINE
+    */
+
+    function acceptRedline() {
+
+        const risk = window.currentRisk || "liability";
+
+        const item = data[risk];
+
+        if (!item.clause) {
+
+            document.getElementById("status")
+                .textContent =
+                "✓ This suggestion can be edited manually.";
+
+            return;
+
+        }
+
+        const clause =
+            document.getElementById(item.clause);
+
+        /*
+            Replace the risky text
+            with the suggested text
+        */
+
+        clause.textContent =
+            item.suggested;
+
+        clause.classList.remove("risky");
+
+        clause.classList.add("accepted");
+
+        document.getElementById("status")
+            .textContent =
+            "✓ Redline accepted and applied to the contract.";
+
+    }
+
+
+    /*
+        REJECT REDLINE
+    */
+
+    function rejectRedline() {
+
+        document.getElementById("status")
+            .textContent =
+            "Redline rejected. The original clause remains unchanged.";
+
+    }
+
+
+    /*
+        DOWNLOAD THE EDITED CONTRACT
+    */
+
+    function downloadContract() {
+
+        const contract =
+            document.getElementById("contract");
+
+        const text =
+            contract.innerText;
+
+        const blob =
+            new Blob(
+                [text],
+                { type: "text/plain" }
+            );
+
+        const url =
+            URL.createObjectURL(blob);
+
+        const link =
+            document.createElement("a");
+
+        link.href = url;
+
+        link.download =
+            "LexiGuard_Edited_Contract.txt";
+
+        link.click();
+
+        URL.revokeObjectURL(url);
+
+    }
+
+
+    /*
+        COMPLETE REVIEW
+    */
+
+    function completeReview() {
+
+        alert(
+            "Contract review completed successfully!"
+        );
+
+    }
+
+
+    /*
+        DEFAULT RISK
+    */
+
+    window.currentRisk = "liability";
+
+</script>
+
+</body>
+</html>
